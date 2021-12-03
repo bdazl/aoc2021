@@ -26,27 +26,17 @@ parse s = (e1*bi, e2*bi) where
     (e1, e2) = dir a
     (a, bi) = cmdval s
 
-solve2 :: [String] -> Int
-solve2 xs = a*b where
-    (a,b,c) = foldl apply2 (0,0,0) xs
-
-solve1 :: [String] -> Int
-solve1 xs = fst sum * snd sum where
+solve :: [String] -> Int
+solve xs = fst sum * snd sum where
     sum = foldl psum (0,0) (map parse xs)
 
-solve = solve2
-
-test2 = solve2 testinp
-test1 = solve1 testinp
-testinp = ["forward 5",
-           "down 5",
-           "forward 8",
-           "up 3",
-           "down 8",
-           "forward 2"]
+solve' :: [String] -> Int
+solve' xs = a*b where
+    (a,b,c) = foldl apply2 (0,0,0) xs
 
 main :: IO ()
 main = do
     file <- readFile "input/day2.txt"
     let l = lines file
-    print (solve l)
+    print $ solve l
+    print $ solve' l
