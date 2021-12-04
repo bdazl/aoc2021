@@ -5,6 +5,8 @@ module Common
 , modifyN
 , count
 , enumerate
+, wordsWhen
+, transpose
 ) where
 
 import System.Environment
@@ -30,3 +32,13 @@ modifyN n new l = y where
 -- Given a predicate, count the number of occorences in a list
 count :: (a -> Bool) -> [a] -> Int
 count pred xs = length . (filter pred) $ xs
+
+wordsWhen :: (Char -> Bool) -> String -> [String]
+wordsWhen p s = case dropWhile p s of
+                    "" -> []
+                    s' -> w : wordsWhen p s''
+                        where (w, s'') = break p s'
+
+transpose :: [[a]] -> [[a]]
+transpose ([]:_) = []
+transpose xs = (map head xs) : transpose (map tail xs)
