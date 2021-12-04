@@ -70,6 +70,21 @@ exec (x:xs) bs = if anytrue ws
     ws = map won new
     new = markall x bs
 
+exec' :: [Int] -> [Board] -> (Int, Board)
+exec' xs [b] = finalize xs b
+exec' (x:xs) bs = exec' xs nowin 
+                  where
+    nowin = filter (not . won) new
+    new = markall x bs
+
+finalize :: [Int] -> Board -> (Int, Board)
+finalize (x:xs) b = if w
+                    then (x, new)
+                    else finalize xs new
+                    where
+                    w = won new
+                    new = mark x b
+
 solve :: [String] -> Int
 solve xs = s * v where
     s = bsum b
@@ -77,11 +92,14 @@ solve xs = s * v where
     (res, brds) = parse xs
 
 solve' :: [String] -> Int
-solve' xs = 2
+solve' xs = s * v where
+    s = bsum b
+    (v, b) = exec' res brds 
+    (res, brds) = parse xs
 
 main :: IO ()
 main = do
-    file <- readFile "input/test4.txt"
+    file <- readFile "input/day4.txt"
     let l = lines file
     print $ solve l
     print $ solve' l
