@@ -8,70 +8,91 @@ data Line = Diag Coord Coord
           | Hori Coord Int
           deriving Show
 
+-- Line checks
+
 vert :: Coord -> Coord -> Bool
 vert (a,_) (x,_) = a == x
 
 hori :: Coord -> Coord -> Bool
 hori (_,b) (_,y) = b == y
 
+-- ctor
+newmap :: Int -> Int -> Map
+newmap x y = gen y (gen x 0)
+
 newdiag :: Coord -> Coord -> Line
 newdiag (a,b) (x,y) | b < y = Diag (a,b) (x,y)
                     | otherwise = Diag (x,y) (a,b)
+
+newvert :: Coord -> Coord -> Line
+newvert (x,a) (_,b) = Vert (x, mi) ma where
+    (mi, ma) = minmax a b
+
+newhori :: Coord -> Coord -> Line
+newhori (a,y) (b,_) = Hori (mi,y) ma where
+    (mi, ma) = minmax a b
+
+newline :: Coord -> Coord -> Line
+newline a b | vert a b = newvert a b
+            | hori a b = newhori a b
+            | otherwise = newdiag a b
+
+-- neat necessary functions
+-- gen, sign and rgn are refactored to common
+-- gen :: Int -> a -> [a]
+-- rng :: Int -> Int -> [Int]
+-- sign :: Int -> Int
+
+minmax a b = (min a b, max a b)
+
+twosplit :: Int -> Int -> [a] -> ([a],[a],[a])
+twosplit a b xs = (start,mid,end) where
+    (mid, end) = splitN (ma-mi+1) modend
+    (start, modend) = splitN mi xs
+    (mi, ma) = minmax a b
+
+-- parsers
 
 parsept :: String -> Coord
 parsept x = (a,b) where
     a = atoi . head $ abs
     b = atoi . last $ abs
     abs = wordsWhen (==',') x
-    
-parselnv :: Coord -> Coord -> Line
-parselnv (x,a) (_,b) = Vert (x, mi) ma where
-    mi = min a b
-    ma = max a b
-
-parselnh :: Coord -> Coord -> Line
-parselnh (a,y) (b,_) = Hori (mi,y) ma where
-    mi = min a b
-    ma = max a b
-
-parseln :: Coord -> Coord -> Line
-parseln a b | vert a b = parselnv a b
-            | hori a b = parselnh a b
-            | otherwise = newdiag a b
 
 parse :: String -> Line
-parse x = parseln a b where
+parse x = newline a b where
     a = parsept . head $ wrds
     b = parsept . last $ wrds
     wrds = words x
 
-gen :: Int -> a -> [a]
-gen 0 _ = []
-gen n x = x:gen (n-1) x
+-- render lines on map. one render per solution
 
-empty :: Int -> Int -> [[Int]]
-empty x y = gen y row where
-    row = gen x 0
+render :: Map -> [Line] -> Map
+render = foldl addln
 
-twosplit :: Int -> Int -> [a] -> ([a],[a],[a])
-twosplit a b xs = (start,mid,end) where
-    (mid, end) = splitN (ma-mi+1) modend
-    (start, modend) = splitN mi xs
-    (mi,ma) = (min a b, max a b)
+render' :: Map -> [Line] -> Map
+render' = foldl addln'
 
-addrow :: Int -> Int -> [Int] -> [Int]
-addrow a b xs = s ++ modmid ++ e where
-    modmid = map (+1) mid
-    (s,mid,e) = twosplit a b xs
+-- separate renders for each case
+-- rendering is just adding one to each coordinate in line segment
+
+addln :: Map -> Line -> Map
+addln b (Diag _ _) = b
+addln b (Vert p m) = addvert b (Vert p m)
+addln b (Hori p m) = addhori b (Hori p m)
+
+addln' :: Map -> Line -> Map
+addln' mp (Diag a b) = adddiag mp (Diag a b)
+addln' mp ln = addln mp ln  -- save a line :)
 
 addvert :: Map -> Line -> Map
 addvert mp (Vert (px,py) my) = s ++ modmid ++ e where
-    modmid = map (addrow px px) mid
+    modmid = map (update px px) mid
     (s,mid,e) = twosplit py my mp
 
 addhori :: Map -> Line -> Map
 addhori mp (Hori (px,py) mx) = a ++ modf:(tail b) where
-    modf = addrow px mx (head b)
+    modf = update px mx (head b)
     (a,b) = splitN py mp
 
 adddiag :: Map -> Line -> Map
@@ -82,22 +103,16 @@ adddiag mp (Diag (a,b) (x,y)) = s ++ newmid ++ e where
 
     (s,mid,e) = twosplit b y mp
 
-    adder = \(x,row) -> addrow x x row
+    adder = \(x,row) -> update x x row
 
-addln :: Map -> Line -> Map
-addln b (Diag _ _) = b
-addln b (Vert p m) = addvert b (Vert p m)
-addln b (Hori p m) = addhori b (Hori p m)
+-- I did not get clever and so all updates/updates
 
-addln' :: Map -> Line -> Map
-addln' mp (Diag a b) = adddiag mp (Diag a b)
-addln' mp ln = addln mp ln
+update :: Int -> Int -> [Int] -> [Int]
+update a b xs = s ++ modmid ++ e where
+    modmid = map (+1) mid
+    (s,mid,e) = twosplit a b xs
 
-fill :: Map -> [Line] -> Map
-fill = foldl addln
-
-fill' :: Map -> [Line] -> Map
-fill' = foldl addln'
+-- ensure correct dimensions of board
 
 maxcoord :: Line -> Coord
 maxcoord (Diag (a,b) (x,y)) = (max a x, max b y)
@@ -111,19 +126,21 @@ maxpt :: Coord -> [Line] -> Coord
 maxpt mp [] = mp
 maxpt mp (x:xs) = maxpt (combmaxpt mp (maxcoord x)) xs
 
+-- solution
+
 slv :: (Map -> [Line] -> Map) -> [String] -> Int
-slv filler xs = sum cnts where
-    cnts = map length reduce
-    reduce = map (filter (>=2)) mp
-    mp = filler (empty (maxx+1) (maxy+1)) lines
+slv rendr xs = sum cnts where
+    cnts = map length $ map (filter (>=2)) mp
+    mp = rendr nmap lines
+    nmap = newmap (maxx+1) (maxy+1)
     (maxx,maxy) = maxpt (0,0) lines
     lines = map parse xs
 
 solve :: [String] -> Int
-solve = slv fill
+solve = slv render
 
 solve' :: [String] -> Int
-solve' = slv fill'
+solve' = slv render'
 
 main :: IO ()
 main = do

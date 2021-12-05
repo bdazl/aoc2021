@@ -7,6 +7,7 @@ module Common
 , enumerate
 , wordsWhen
 , transpose
+, gen
 , sign
 , rng
 ) where
@@ -44,6 +45,11 @@ wordsWhen p s = case dropWhile p s of
 transpose :: [[a]] -> [[a]]
 transpose ([]:_) = []
 transpose xs = (map head xs) : transpose (map tail xs)
+
+-- generate
+gen :: Int -> a -> [a]
+gen 0 _ = []
+gen n x = x:gen (n-1) x
 
 sign :: Int -> Int
 sign a | a < 0 = -1
