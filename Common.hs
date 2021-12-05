@@ -7,6 +7,8 @@ module Common
 , enumerate
 , wordsWhen
 , transpose
+, sign
+, rng
 ) where
 
 import System.Environment
@@ -42,3 +44,13 @@ wordsWhen p s = case dropWhile p s of
 transpose :: [[a]] -> [[a]]
 transpose ([]:_) = []
 transpose xs = (map head xs) : transpose (map tail xs)
+
+sign :: Int -> Int
+sign a | a < 0 = -1
+       | a == 0 = 0
+       | otherwise = 1
+
+-- rng (range) is similar to [a..b], but also works when a > b
+rng :: Int -> Int -> [Int]
+rng a b | a == b = [a]
+        | otherwise = a : rng (a+(sign (b-a))) b

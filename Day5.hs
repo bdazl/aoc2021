@@ -74,14 +74,6 @@ addhori mp (Hori (px,py) mx) = a ++ modf:(tail b) where
     modf = addrow px mx (head b)
     (a,b) = splitN py mp
 
-sign :: Int -> Int
-sign a | a < 0 = -1
-       | otherwise = 1
-
-rng :: Int -> Int -> [Int]
-rng a b | a == b = [a]
-        | otherwise = a : rng (a+(sign (b-a))) b
-
 adddiag :: Map -> Line -> Map
 adddiag mp (Diag (a,b) (x,y)) = s ++ newmid ++ e where
     -- due to how diagonals are parsed: b <= y
@@ -119,7 +111,6 @@ maxpt :: Coord -> [Line] -> Coord
 maxpt mp [] = mp
 maxpt mp (x:xs) = maxpt (combmaxpt mp (maxcoord x)) xs
 
-
 slv :: (Map -> [Line] -> Map) -> [String] -> Int
 slv filler xs = sum cnts where
     cnts = map length reduce
@@ -127,7 +118,6 @@ slv filler xs = sum cnts where
     mp = filler (empty (maxx+1) (maxy+1)) lines
     (maxx,maxy) = maxpt (0,0) lines
     lines = map parse xs
-
 
 solve :: [String] -> Int
 solve = slv fill
