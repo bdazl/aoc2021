@@ -1,9 +1,12 @@
 module Day4 where
 import Common
 
-type Coord = (Int, Int)
-type Line = (Coord, Coord)
 type Map = [[Int]]
+type Coord = (Int, Int)
+data Line = Free Coord Coord
+          | Vert Coord Int
+          | Hori Coord Int
+          deriving Show
 
 parsept :: String -> Coord
 parsept x = (a,b) where
@@ -11,9 +14,23 @@ parsept x = (a,b) where
     b = atoi . last $ abs
     abs = wordsWhen (==',') x
     
+parselnv :: Coord -> Coord -> Line
+parselnv (x,a) (_,b) = Vert (x, mi) ma where
+    mi = min a b
+    ma = max a b
+
+parselnh :: Coord -> Coord -> Line
+parselnh (a,y) (b,_) = Hori (mi,y) ma where
+    mi = min a b
+    ma = max a b
+
+parseln :: Coord -> Coord -> Line
+parseln a b | vert (Free a b) = parselnv a b
+            | hori (Free a b) = parselnh a b
+            | otherwise = Free a b
 
 parse :: String -> Line
-parse x = (a,b) where
+parse x = parseln a b where
     a = parsept . head $ wrds
     b = parsept . last $ wrds
     wrds = words x
@@ -27,58 +44,62 @@ empty x y = gen y row where
     row = gen x 0
 
 vert :: Line -> Bool
-vert ((a, _), (x, _)) = a == x
+vert (Free (a,_) (x,_)) = a == x
+vert (Vert _ _) = True
+vert (Hori _ _) = False
 
-horiz :: Line -> Bool
-horiz ((_, b), (_, y)) = b == y
+hori :: Line -> Bool
+hori (Free (_,b) (_,y)) = b == y
+hori (Vert _ _) = False
+hori (Hori _ _) = True
 
-addb :: Map -> Coord -> Map
-addb b (x,y) = modifyN y nrow b where
-    nrow = modifyN x (val+1) row
-    val = row !! x
-    row = b !! y
+twosplit :: Int -> Int -> [a] -> ([a],[a],[a])
+twosplit a b xs = (start,mid,end) where
+    (mid, end) = splitN (ma-mi+1) modend
+    (start, modend) = splitN mi xs
+    (mi,ma) = (min a b, max a b)
 
-fill :: Map -> [Coord] -> Map
-fill m = foldl addb m
+addrow :: Int -> Int -> [Int] -> [Int]
+addrow a b xs = s ++ modmid ++ e where
+    modmid = map (+1) mid
+    (s,mid,e) = twosplit a b xs
 
--- remove me?
-fillv :: Map -> Line -> Map
-fillv m ((x, a),(_,b)) = fill m pts where
-    pts = zip (gen (-1) x) [a..b]
+addvert :: Map -> Line -> Map
+addvert mp (Vert (px,py) my) = s ++ modmid ++ e where
+    modmid = map (addrow px px) mid
+    (s,mid,e) = twosplit py my mp
 
-vertpts :: Line -> [Coord]
-vertpts ((x,a),(_,b)) = zip (gen (-1) x) [mi..ma] where
-    mi = min a b
-    ma = max a b
+addhori :: Map -> Line -> Map
+addhori mp (Hori (px,py) mx) = a ++ modf:(tail b) where
+    modf = addrow px mx (head b)
+    (a,b) = splitN py mp
 
-horizpts :: Line -> [Coord]
-horizpts ((a,y),(b,_)) = zip [mi..ma] (gen (-1) y) where
-    mi = min a b
-    ma = max a b
+addln :: Map -> Line -> Map
+addln b (Free _ _) = b
+addln b (Vert p m) = addvert b (Vert p m)
+addln b (Hori p m) = addhori b (Hori p m)
 
-linepts :: Line -> [Coord]
-linepts l | vert l = vertpts l
-          | horiz l = horizpts l
-          | otherwise = []
+fill :: Map -> [Line] -> Map
+fill = foldl addln
 
-join :: [[a]] -> [a]
-join [] = []
-join (x:xss) = x ++ join xss
+maxcoord :: Line -> Coord
+maxcoord (Free (a,b) (x,y)) = (max a x, max b y)
+maxcoord (Vert (x,y) my) = (x, max y my)
+maxcoord (Hori (x,y) mx) = (max x mx, y)
 
 combmaxpt :: Coord -> Coord -> Coord
 combmaxpt (a,b) (x,y) = (max a x, max b y)
 
-maxpt :: Coord -> [Coord] -> Coord
+maxpt :: Coord -> [Line] -> Coord
 maxpt mp [] = mp
-maxpt mp (x:xs) = maxpt (combmaxpt mp x) xs
+maxpt mp (x:xs) = maxpt (combmaxpt mp (maxcoord x)) xs
 
 solve :: [String] -> Int
 solve xs = sum cnts where
     cnts = map length reduce
     reduce = map (filter (>=2)) mp
-    mp = fill (empty maxx maxy) pts
-    (maxx,maxy) = maxpt (0,0) pts
-    pts = join . (map linepts) $ lines
+    mp = fill (empty (maxx+1) (maxy+1)) lines
+    (maxx,maxy) = maxpt (0,0) lines
     lines = map parse xs
 
 solve' :: [String] -> Int
