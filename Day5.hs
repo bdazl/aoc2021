@@ -8,7 +8,7 @@ data Line = Diag Coord Coord
           | Hori Coord Int
           deriving Show
 
--- Line checks
+-- line checks
 
 vert :: Coord -> Coord -> Bool
 vert (a,_) (x,_) = a == x
