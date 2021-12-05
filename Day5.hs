@@ -3,10 +3,20 @@ import Common
 
 type Map = [[Int]]
 type Coord = (Int, Int)
-data Line = Free Coord Coord
+data Line = Diag Coord Coord
           | Vert Coord Int
           | Hori Coord Int
           deriving Show
+
+vert :: Coord -> Coord -> Bool
+vert (a,_) (x,_) = a == x
+
+hori :: Coord -> Coord -> Bool
+hori (_,b) (_,y) = b == y
+
+newdiag :: Coord -> Coord -> Line
+newdiag (a,b) (x,y) | b < y = Diag (a,b) (x,y)
+                    | otherwise = Diag (x,y) (a,b)
 
 parsept :: String -> Coord
 parsept x = (a,b) where
@@ -25,9 +35,9 @@ parselnh (a,y) (b,_) = Hori (mi,y) ma where
     ma = max a b
 
 parseln :: Coord -> Coord -> Line
-parseln a b | vert (Free a b) = parselnv a b
-            | hori (Free a b) = parselnh a b
-            | otherwise = Free a b
+parseln a b | vert a b = parselnv a b
+            | hori a b = parselnh a b
+            | otherwise = newdiag a b
 
 parse :: String -> Line
 parse x = parseln a b where
@@ -42,16 +52,6 @@ gen n x = x:gen (n-1) x
 empty :: Int -> Int -> [[Int]]
 empty x y = gen y row where
     row = gen x 0
-
-vert :: Line -> Bool
-vert (Free (a,_) (x,_)) = a == x
-vert (Vert _ _) = True
-vert (Hori _ _) = False
-
-hori :: Line -> Bool
-hori (Free (_,b) (_,y)) = b == y
-hori (Vert _ _) = False
-hori (Hori _ _) = True
 
 twosplit :: Int -> Int -> [a] -> ([a],[a],[a])
 twosplit a b xs = (start,mid,end) where
@@ -74,16 +74,41 @@ addhori mp (Hori (px,py) mx) = a ++ modf:(tail b) where
     modf = addrow px mx (head b)
     (a,b) = splitN py mp
 
+sign :: Int -> Int
+sign a | a < 0 = -1
+       | otherwise = 1
+
+rng :: Int -> Int -> [Int]
+rng a b | a == b = [a]
+        | otherwise = a : rng (a+(sign (b-a))) b
+
+adddiag :: Map -> Line -> Map
+adddiag mp (Diag (a,b) (x,y)) = s ++ newmid ++ e where
+    -- due to how diagonals are parsed: b <= y
+    newmid = map adder xonmid
+    xonmid = zip (rng a x) mid
+
+    (s,mid,e) = twosplit b y mp
+
+    adder = \(x,row) -> addrow x x row
+
 addln :: Map -> Line -> Map
-addln b (Free _ _) = b
+addln b (Diag _ _) = b
 addln b (Vert p m) = addvert b (Vert p m)
 addln b (Hori p m) = addhori b (Hori p m)
+
+addln' :: Map -> Line -> Map
+addln' mp (Diag a b) = adddiag mp (Diag a b)
+addln' mp ln = addln mp ln
 
 fill :: Map -> [Line] -> Map
 fill = foldl addln
 
+fill' :: Map -> [Line] -> Map
+fill' = foldl addln'
+
 maxcoord :: Line -> Coord
-maxcoord (Free (a,b) (x,y)) = (max a x, max b y)
+maxcoord (Diag (a,b) (x,y)) = (max a x, max b y)
 maxcoord (Vert (x,y) my) = (x, max y my)
 maxcoord (Hori (x,y) mx) = (max x mx, y)
 
@@ -94,17 +119,21 @@ maxpt :: Coord -> [Line] -> Coord
 maxpt mp [] = mp
 maxpt mp (x:xs) = maxpt (combmaxpt mp (maxcoord x)) xs
 
-solve :: [String] -> Int
-solve xs = sum cnts where
+
+slv :: (Map -> [Line] -> Map) -> [String] -> Int
+slv filler xs = sum cnts where
     cnts = map length reduce
     reduce = map (filter (>=2)) mp
-    mp = fill (empty (maxx+1) (maxy+1)) lines
+    mp = filler (empty (maxx+1) (maxy+1)) lines
     (maxx,maxy) = maxpt (0,0) lines
     lines = map parse xs
 
+
+solve :: [String] -> Int
+solve = slv fill
+
 solve' :: [String] -> Int
-solve' xs = retval where
-    retval = 2
+solve' = slv fill'
 
 main :: IO ()
 main = do
