@@ -1,4 +1,4 @@
-module Day4 where
+module Day5 where
 import Common
 
 type Map = [[Int]]
