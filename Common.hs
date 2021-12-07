@@ -46,7 +46,8 @@ transpose :: [[a]] -> [[a]]
 transpose ([]:_) = []
 transpose xs = (map head xs) : transpose (map tail xs)
 
--- generate
+-- generate (apparently this is a re-implementation of the Prelude function: replicate)
+-- use replicate instead
 gen :: Int -> a -> [a]
 gen 0 _ = []
 gen n x = x:gen (n-1) x
