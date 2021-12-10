@@ -1,6 +1,7 @@
 module Common
 ( atoi
 , btoi
+, chtoi
 , splitN
 , modifyN
 , count
@@ -23,6 +24,9 @@ btoi False = 0
 
 atoi :: String -> Int
 atoi s = read s :: Int
+
+chtoi :: Char -> Int
+chtoi = read . pure
 
 splitN :: Int -> [a] -> ([a], [a])
 splitN n l = (take n l, drop n l)
