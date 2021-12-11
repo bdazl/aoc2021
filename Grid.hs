@@ -1,5 +1,6 @@
 module Grid where
 import Data.Maybe
+import Common
 
 -- im hoping that this will come in handy for other problems
 type Grid a = [[a]]
@@ -48,7 +49,7 @@ ndiaglr :: Coord ->[Coord]
 ndiaglr (x,y) = [(x-1, y-1), (x+1, y+1)]
 
 ndiagrl :: Coord ->[Coord]
-ndiagrl (x,y) = [(x-1, y-1), (x+1, y+1)]
+ndiagrl (x,y) = [(x+1, y-1), (x-1, y+1)]
 
 nplus = combiner [nvert, nhoriz]
 ndiag = combiner [ndiaglr, ndiagrl]
@@ -58,3 +59,9 @@ nrim = combiner [nplus, ndiag]
 combiner :: [a -> [b]] -> a -> [b]
 combiner xs v = foldr (++) [] . map (apply v) $ xs where
     apply a f = f a
+
+-- apply function to all values in grid (that could become a new type of grid)
+gridapply :: (Grid a -> Coord -> a -> b) -> Grid a -> Grid b
+gridapply f mp = map rowop $ enumerate mp where
+    rowop (y,row) = map (op y) $ enumerate row
+    op y (x,v) = f mp (x,y) v
