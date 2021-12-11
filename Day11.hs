@@ -15,6 +15,10 @@ type MineMap = Grid MineFlash
 -- as the value (first argument)
 data Mine = Expl | Inac Int Int deriving (Eq,Show)
 
+explosion = (>9)
+
+-- mine generating functions
+
 newmine :: Int -> Mine
 newmine n = if explosion n then Expl else Inac n 0
 
@@ -29,12 +33,12 @@ mcollapse :: Mine -> Int -> (Int, Int)
 mcollapse Expl flsh       = (0, flsh+1)
 mcollapse (Inac v n) flsh = (v, flsh)
 
+-- parse
+
 parseln :: String -> [Int]
 parseln xs = map chtoi xs
 
 parse = map parseln
-
-explosion = (>9)
 
 -- first action is to convert the Map to a FlashMap
 init' :: Map -> Coord -> Int -> ValFlash
@@ -43,7 +47,7 @@ init' mp c v = (v, 0)
 energize :: FlashMap -> Coord -> (Int,Int) -> MineFlash
 energize mp c (v,flsh) = (newmine (v+1), flsh)
 
--- absorb surrounding flashes (if zero we have flashed and should be inert)
+-- absorb surrounding flashcount (if zero we have flashed and should be inert)
 absorb :: MineMap -> Coord -> (Mine,Int) -> MineFlash
 absorb mp c (mine,flsh) = (mabsorb mine neigh,flsh) where
     neigh = map fst . neighbours nrim c $ mp
@@ -91,15 +95,23 @@ multistep :: Int -> FlashMap -> FlashMap
 multistep 0 mp = mp
 multistep n mp = multistep (n-1) (step mp)
 
-flashes :: FlashMap -> Int
-flashes = sum . map sum . flashgrid
+findsync :: Int -> FlashMap -> Int
+findsync n mp = if insync mp
+                then n
+                else findsync (n+1) (step mp)
+
+flashcount :: FlashMap -> Int
+flashcount = sum . map sum . flashgrid
+
+insync :: FlashMap -> Bool
+insync = (==0) . sum . map sum . valuegrid
 
 -- solution
 solve :: [String] -> Int
-solve = flashes . multistep 100 . starter . parse
+solve = flashcount . multistep 100 . starter . parse
 
 solve' :: [String] -> Int
-solve' xs = 2
+solve' = findsync 0 . starter . parse
 
 main :: IO ()
 main = do
@@ -107,9 +119,3 @@ main = do
     let l = lines file
     print $ solve l
     print $ solve' l
-
-test :: IO Map
-test = do
-    file <- readFile "input/test11.txt"
-    let l = lines file
-    return (parse l)
