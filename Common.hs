@@ -6,6 +6,7 @@ module Common
 , modifyN
 , count
 , enumerate
+, clamp
 , wordsWhen
 , transpose
 , gen
@@ -17,6 +18,9 @@ import System.Environment
 
 enumerate :: [a] -> [(Int, a)]
 enumerate = zip (map fromIntegral [0..])
+
+clamp :: (Ord a) => a -> a -> a -> a
+clamp mn mx = max mn . min mx
 
 btoi :: Bool -> Int
 btoi True  = 1
